@@ -1,0 +1,5 @@
+# Railway ignore file
+# Asegura que bun.lockb no se use nunca
+
+bun.lockb
+*.lockb

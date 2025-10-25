@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔴 Monitor en Tiempo Real - Fase 1</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Consolas', 'Monaco', monospace;
+            background: #0d1117;
+            color: #c9d1d9;
+            padding: 20px;
+            font-size: 14px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #58a6ff;
+            margin-bottom: 10px;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .pulse {
+            width: 12px;
+            height: 12px;
+            background: #3fb950;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 15px;
+        }
+        .card h2 {
+            color: #58a6ff;
+            font-size: 16px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .status {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+            margin-left: auto;
+        }
+        .status.ok {
+            background: #238636;
+            color: #fff;
+        }
+        .status.error {
+            background: #da3633;
+            color: #fff;
+        }
+        .status.warning {
+            background: #9e6a03;
+            color: #fff;
+        }
+        .status.checking {
+            background: #1f6feb;
+            color: #fff;
+        }
+        .log {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 4px;
+            border-left: 2px solid transparent;
+        }
+        .log-entry.success {
+            color: #3fb950;
+            border-left-color: #3fb950;
+        }
+        .log-entry.error {
+            color: #f85149;
+            border-left-color: #f85149;
+        }
+        .log-entry.info {
+            color: #58a6ff;
+            border-left-color: #58a6ff;
+        }
+        .log-entry.warning {
+            color: #d29922;
+            border-left-color: #d29922;
+        }
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            border-bottom: 1px solid #21262d;
+        }
+        .metric:last-child {
+            border-bottom: none;
+        }
+        .metric-label {
+            color: #8b949e;
+        }
+        .metric-value {
+            color: #c9d1d9;
+            font-weight: bold;
+        }
+        .console-output {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 15px;
+            margin-top: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .console-output h2 {
+            color: #f85149;
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+        button {
+            background: #238636;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-right: 8px;
+            margin-top: 10px;
+        }
+        button:hover {
+            background: #2ea043;
+        }
+        button.danger {
+            background: #da3633;
+        }
+        button.danger:hover {
+            background: #e5534b;
+        }
+        .timestamp {
+            color: #6e7681;
+            font-size: 11px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>
+            <span class="pulse" id="main-pulse"></span>
+            🔴 MONITOR EN TIEMPO REAL - FASE 1
+        </h1>
+        <p style="color: #8b949e; margin-bottom: 20px;">
+            Monitoreando todos los servicios cada 5 segundos. Los errores se reportarán automáticamente.
+        </p>
+
+        <div class="grid">
+            <!-- Backend API -->
+            <div class="card">
+                <h2>
+                    🟢 Backend API
+                    <span class="status checking" id="backend-status">Checking...</span>
+                </h2>
+                <div class="metric">
+                    <span class="metric-label">URL</span>
+                    <span class="metric-value">localhost:3001</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Última respuesta</span>
+                    <span class="metric-value" id="backend-time">-</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Uptime</span>
+                    <span class="metric-value" id="backend-uptime">-</span>
+                </div>
+                <div class="log" id="backend-log"></div>
+            </div>
+
+            <!-- Frontend Next.js -->
+            <div class="card">
+                <h2>
+                    🟦 Frontend Next.js
+                    <span class="status checking" id="frontend-status">Checking...</span>
+                </h2>
+                <div class="metric">
+                    <span class="metric-label">URL</span>
+                    <span class="metric-value">localhost:3002</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Última respuesta</span>
+                    <span class="metric-value" id="frontend-time">-</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Estado</span>
+                    <span class="metric-value" id="frontend-state">-</span>
+                </div>
+                <div class="log" id="frontend-log"></div>
+            </div>
+
+            <!-- MongoDB -->
+            <div class="card">
+                <h2>
+                    🍃 MongoDB Atlas
+                    <span class="status checking" id="mongo-status">Checking...</span>
+                </h2>
+                <div class="metric">
+                    <span class="metric-label">Conexión</span>
+                    <span class="metric-value" id="mongo-connection">-</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Respuesta DB</span>
+                    <span class="metric-value" id="mongo-time">-</span>
+                </div>
+                <div class="log" id="mongo-log"></div>
+            </div>
+
+            <!-- Endpoints Admin -->
+            <div class="card">
+                <h2>
+                    👑 Endpoints Admin
+                    <span class="status checking" id="admin-status">Checking...</span>
+                </h2>
+                <div class="metric">
+                    <span class="metric-label">/admin/check</span>
+                    <span class="metric-value" id="admin-check">-</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">/projects/pending</span>
+                    <span class="metric-value" id="admin-pending">-</span>
+                </div>
+                <div class="log" id="admin-log"></div>
+            </div>
+
+            <!-- API Projects -->
+            <div class="card">
+                <h2>
+                    📁 API Projects
+                    <span class="status checking" id="projects-status">Checking...</span>
+                </h2>
+                <div class="metric">
+                    <span class="metric-label">GET /projects</span>
+                    <span class="metric-value" id="projects-list">-</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">POST /projects</span>
+                    <span class="metric-value" id="projects-create">-</span>
+                </div>
+                <div class="log" id="projects-log"></div>
+            </div>
+
+            <!-- Clerk Auth -->
+            <div class="card">
+                <h2>
+                    🔐 Clerk Auth
+                    <span class="status checking" id="clerk-status">Checking...</span>
+                </h2>
+                <div class="metric">
+                    <span class="metric-label">Estado</span>
+                    <span class="metric-value" id="clerk-state">-</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Usuario</span>
+                    <span class="metric-value" id="clerk-user">-</span>
+                </div>
+                <div class="log" id="clerk-log"></div>
+            </div>
+        </div>
+
+        <!-- Consola de Errores -->
+        <div class="console-output">
+            <h2>🚨 CONSOLA DE ERRORES Y ALERTAS</h2>
+            <div id="error-console"></div>
+            <button onclick="clearErrors()">🗑️ Limpiar Consola</button>
+            <button onclick="runFullTest()" style="background: #1f6feb;">🧪 Test Completo</button>
+            <button onclick="location.href='test-fase1.html'" style="background: #6e40c9;">🎮 Ir a Test Interactivo</button>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:3001/api';
+        const FRONTEND_URL = 'http://localhost:3002';
+        const INTERVAL = 5000; // 5 segundos
+
+        let startTime = Date.now();
+        let checks = {
+            backend: 0,
+            frontend: 0,
+            mongo: 0,
+            admin: 0,
+            projects: 0,
+            clerk: 0
+        };
+
+        // Utilidades
+        function timestamp() {
+            return new Date().toLocaleTimeString();
+        }
+
+        function addLog(id, message, type = 'info') {
+            const log = document.getElementById(`${id}-log`);
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.innerHTML = `<span class="timestamp">[${timestamp()}]</span> ${message}`;
+            log.insertBefore(entry, log.firstChild);
+            
+            // Limitar a 10 entradas
+            while (log.children.length > 10) {
+                log.removeChild(log.lastChild);
+            }
+        }
+
+        function setStatus(id, status) {
+            const el = document.getElementById(`${id}-status`);
+            el.className = `status ${status}`;
+            el.textContent = status === 'ok' ? '✅ OK' : status === 'error' ? '❌ ERROR' : status === 'warning' ? '⚠️ WARNING' : '🔄 Checking...';
+        }
+
+        function addError(message, severity = 'error') {
+            const console = document.getElementById('error-console');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${severity}`;
+            entry.innerHTML = `<span class="timestamp">[${timestamp()}]</span> <strong>${severity.toUpperCase()}:</strong> ${message}`;
+            console.insertBefore(entry, console.firstChild);
+
+            // También lo logueamos en la consola del navegador
+            console[severity === 'error' ? 'error' : 'warn'](`[MONITOR] ${message}`);
+
+            // Límite de 50 errores
+            while (console.children.length > 50) {
+                console.removeChild(console.lastChild);
+            }
+        }
+
+        function clearErrors() {
+            document.getElementById('error-console').innerHTML = '';
+        }
+
+        // Monitores específicos
+        async function checkBackend() {
+            const start = Date.now();
+            try {
+                const response = await fetch(`${API_URL.replace('/api', '')}/health`, {
+                    method: 'GET',
+                    cache: 'no-cache'
+                });
+                
+                const time = Date.now() - start;
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    setStatus('backend', 'ok');
+                    document.getElementById('backend-time').textContent = `${time}ms`;
+                    document.getElementById('backend-uptime').textContent = Math.floor((Date.now() - startTime) / 1000) + 's';
+                    addLog('backend', `✅ Health check OK (${time}ms)`, 'success');
+                    checks.backend++;
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                setStatus('backend', 'error');
+                addLog('backend', `❌ Error: ${error.message}`, 'error');
+                addError(`🟢 Backend API no responde: ${error.message}`, 'error');
+            }
+        }
+
+        async function checkFrontend() {
+            const start = Date.now();
+            try {
+                const response = await fetch(FRONTEND_URL, {
+                    method: 'HEAD',
+                    cache: 'no-cache'
+                });
+                
+                const time = Date.now() - start;
+                
+                if (response.ok || response.status === 304) {
+                    setStatus('frontend', 'ok');
+                    document.getElementById('frontend-time').textContent = `${time}ms`;
+                    document.getElementById('frontend-state').textContent = 'Running';
+                    addLog('frontend', `✅ Next.js activo (${time}ms)`, 'success');
+                    checks.frontend++;
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                setStatus('frontend', 'error');
+                addLog('frontend', `❌ Error: ${error.message}`, 'error');
+                addError(`🟦 Frontend Next.js no responde: ${error.message}`, 'error');
+            }
+        }
+
+        async function checkMongo() {
+            const start = Date.now();
+            try {
+                // Verificamos indirectamente via backend health
+                const response = await fetch(`${API_URL}/projects?limit=1`, {
+                    method: 'GET',
+                    cache: 'no-cache'
+                });
+                
+                const time = Date.now() - start;
+                
+                if (response.ok) {
+                    await response.json();
+                    setStatus('mongo', 'ok');
+                    document.getElementById('mongo-connection').textContent = 'Connected';
+                    document.getElementById('mongo-time').textContent = `${time}ms`;
+                    addLog('mongo', `✅ MongoDB query OK (${time}ms)`, 'success');
+                    checks.mongo++;
+                } else {
+                    throw new Error(`Query failed: ${response.status}`);
+                }
+            } catch (error) {
+                setStatus('mongo', 'error');
+                addLog('mongo', `❌ Error: ${error.message}`, 'error');
+                addError(`🍃 MongoDB Atlas: Problema de conexión - ${error.message}`, 'error');
+            }
+        }
+
+        async function checkAdminEndpoints() {
+            try {
+                // Check /admin/check
+                const checkRes = await fetch(`${API_URL}/admin/check`, {
+                    credentials: 'include',
+                    cache: 'no-cache'
+                });
+                
+                if (checkRes.ok) {
+                    const data = await checkRes.json();
+                    document.getElementById('admin-check').textContent = data.isAdmin ? '✅ Admin' : '⚠️ No Admin';
+                    addLog('admin', `✅ /admin/check: ${data.isAdmin ? 'Admin' : 'User'}`, 'success');
+                } else if (checkRes.status === 401) {
+                    document.getElementById('admin-check').textContent = '🔒 No auth';
+                    addLog('admin', `⚠️ No autenticado (normal si no has hecho login)`, 'warning');
+                } else {
+                    throw new Error(`/admin/check: ${checkRes.status}`);
+                }
+
+                // Check /projects/pending
+                const pendingRes = await fetch(`${API_URL}/projects/pending`, {
+                    credentials: 'include',
+                    cache: 'no-cache'
+                });
+                
+                if (pendingRes.ok) {
+                    const data = await pendingRes.json();
+                    document.getElementById('admin-pending').textContent = `${data.total || 0} pending`;
+                    addLog('admin', `✅ /projects/pending: ${data.total || 0} proyectos`, 'success');
+                    setStatus('admin', 'ok');
+                    checks.admin++;
+                } else if (pendingRes.status === 401 || pendingRes.status === 403) {
+                    document.getElementById('admin-pending').textContent = '🔒 No access';
+                    setStatus('admin', 'warning');
+                    addLog('admin', `⚠️ Sin permisos admin (necesitas ser admin)`, 'warning');
+                } else {
+                    throw new Error(`/projects/pending: ${pendingRes.status}`);
+                }
+            } catch (error) {
+                setStatus('admin', 'error');
+                addLog('admin', `❌ Error: ${error.message}`, 'error');
+                addError(`👑 Admin endpoints: ${error.message}`, 'warning');
+            }
+        }
+
+        async function checkProjectsAPI() {
+            try {
+                // Check GET /projects
+                const start = Date.now();
+                const listRes = await fetch(`${API_URL}/projects?limit=5`, {
+                    cache: 'no-cache'
+                });
+                
+                const time = Date.now() - start;
+                
+                if (listRes.ok) {
+                    const data = await listRes.json();
+                    document.getElementById('projects-list').textContent = `✅ ${data.projects?.length || 0} projects`;
+                    addLog('projects', `✅ GET /projects: ${data.projects?.length || 0} proyectos (${time}ms)`, 'success');
+                    setStatus('projects', 'ok');
+                    checks.projects++;
+                } else {
+                    throw new Error(`GET /projects: ${listRes.status}`);
+                }
+
+                // POST no se testea automáticamente (requiere auth)
+                document.getElementById('projects-create').textContent = '⚠️ Requiere auth';
+            } catch (error) {
+                setStatus('projects', 'error');
+                addLog('projects', `❌ Error: ${error.message}`, 'error');
+                addError(`📁 Projects API: ${error.message}`, 'error');
+            }
+        }
+
+        async function checkClerkAuth() {
+            try {
+                // Verificar si hay sesión activa
+                const response = await fetch(`${API_URL}/admin/check`, {
+                    credentials: 'include',
+                    cache: 'no-cache'
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    setStatus('clerk', 'ok');
+                    document.getElementById('clerk-state').textContent = '🟢 Authenticated';
+                    document.getElementById('clerk-user').textContent = data.email || 'Unknown';
+                    addLog('clerk', `✅ Usuario autenticado: ${data.email || 'N/A'}`, 'success');
+                    checks.clerk++;
+                } else if (response.status === 401) {
+                    setStatus('clerk', 'warning');
+                    document.getElementById('clerk-state').textContent = '⚠️ Not logged in';
+                    document.getElementById('clerk-user').textContent = 'Anónimo';
+                    addLog('clerk', `⚠️ No hay sesión activa (haz login primero)`, 'warning');
+                } else {
+                    throw new Error(`Auth check: ${response.status}`);
+                }
+            } catch (error) {
+                setStatus('clerk', 'error');
+                addLog('clerk', `❌ Error: ${error.message}`, 'error');
+                addError(`🔐 Clerk Auth: ${error.message}`, 'warning');
+            }
+        }
+
+        // Test completo
+        async function runFullTest() {
+            addError('🧪 Ejecutando test completo...', 'info');
+            await checkBackend();
+            await checkFrontend();
+            await checkMongo();
+            await checkAdminEndpoints();
+            await checkProjectsAPI();
+            await checkClerkAuth();
+            addError('✅ Test completo finalizado', 'info');
+        }
+
+        // Monitor principal
+        async function runMonitor() {
+            await Promise.all([
+                checkBackend(),
+                checkFrontend(),
+                checkMongo(),
+                checkAdminEndpoints(),
+                checkProjectsAPI(),
+                checkClerkAuth()
+            ]);
+        }
+
+        // Iniciar monitoreo
+        console.log('🔴 Monitor iniciado - Monitoreando cada 5 segundos');
+        addError('🟢 Monitor iniciado correctamente', 'info');
+        
+        // Primera ejecución inmediata
+        runMonitor();
+        
+        // Ejecución periódica
+        setInterval(runMonitor, INTERVAL);
+
+        // Log de inicio
+        window.addEventListener('load', () => {
+            console.log('📊 Monitor de Fase 1 cargado');
+            console.log('📍 Backend API:', API_URL);
+            console.log('📍 Frontend:', FRONTEND_URL);
+            console.log('⏱️ Intervalo de chequeo:', INTERVAL / 1000, 'segundos');
+        });
+    </script>
+</body>
+</html>

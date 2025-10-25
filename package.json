@@ -1,0 +1,20 @@
+{
+  "name": "crezco-crowdfunding",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Plataforma de crowdfunding CREZCO - Backend y Frontend",
+  "scripts": {
+    "dev:frontend": "cd crezco-app && npm run dev",
+    "dev:frontend-vite": "vite --port 5173",
+    "dev:backend": "cd backend && node src/server.js",
+    "dev": "echo 'Inicia frontend y backend por separado: npm run dev:frontend y npm run dev:backend'",
+    "install:all": "npm install && cd backend && npm install && cd ../crezco-app && npm install"
+  },
+  "workspaces": [
+    "backend",
+    "crezco-app"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
